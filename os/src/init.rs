@@ -14,9 +14,17 @@ pub extern "C" fn rust_main() -> ! {
         PHYSICAL_MEMORY_END >> 12,
     );
     crate::interrupt::init();
+
+    // For lab-1
+    unsafe {
+        asm!("mret"::::"volatile");
+    }
+
+    /*
     crate::fs::init();
     crate::process::init();
     crate::timer::init();
     crate::process::run();
+    */
     loop {}
 }
