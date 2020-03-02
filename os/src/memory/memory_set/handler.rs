@@ -5,6 +5,7 @@ use crate::memory::alloc_frame;
 use crate::memory::paging::PageTableImpl;
 use alloc::boxed::Box;
 use core::fmt::Debug;
+use alloc::string::String;
 
 pub trait MemoryHandler: Debug + 'static {
     fn box_clone(&self) -> Box<dyn MemoryHandler>;

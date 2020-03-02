@@ -8,6 +8,8 @@ use frame_allocator::SEGMENT_TREE_ALLOCATOR as FRAME_ALLOCATOR;
 use memory_set::{attr::MemoryAttr, handler::Linear, MemorySet};
 use riscv::addr::{Frame, Page, PhysAddr, VirtAddr};
 use riscv::register::sstatus;
+use crate::memory::frame_allocator::FirstFitAllocator;
+use spin::Mutex;
 
 pub fn init(l: usize, r: usize) {
     unsafe {
@@ -17,6 +19,28 @@ pub fn init(l: usize, r: usize) {
     init_heap();
     kernel_remap();
     println!("++++ setup memory!    ++++");
+}
+
+pub static FIRST_FIT_ALLOCATOR: Mutex<FirstFitAllocator> = Mutex::new(FirstFitAllocator {
+    flags: [false; MAX_PHYSICAL_PAGES],
+    offset: 0,
+    size: 0,
+});
+
+pub fn init_allocator(l: usize, r: usize) {
+    FIRST_FIT_ALLOCATOR.lock().init(l, r);
+}
+
+pub fn alloc_frames(cnt: usize) -> Option<Frame> {
+    if let Some(start) = FIRST_FIT_ALLOCATOR.lock().alloc_frames(cnt) {
+        Some(Frame::of_ppn(start))
+    } else {
+        None
+    }
+}
+
+pub fn dealloc_frames(frame: Frame, cnt: usize) {
+    FIRST_FIT_ALLOCATOR.lock().dealloc_frames(frame.number(), cnt);
 }
 
 pub fn alloc_frame() -> Option<Frame> {

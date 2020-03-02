@@ -75,6 +75,32 @@ impl FirstFitAllocator {
         self.size = r - l;
     }
 
+    pub fn alloc_frames(&mut self, cnt: usize) -> Option<usize> {
+        for start in 0..(self.size - cnt + 1) {
+            let mut satisfied = true;
+            for index in start..(start + cnt) {
+                if self.flags[index] {
+                    satisfied = false;
+                    break;
+                }
+            }
+            if satisfied {
+                for index in start..(start + cnt) {
+                    self.flags[index] = true;
+                }
+                return Some(start + self.offset);
+            }
+        }
+        None
+    }
+
+    pub fn dealloc_frames(&mut self, start: usize, cnt: usize) {
+        let start = start - self.offset;
+        for index in start..(start + cnt) {
+            self.flags[index] = false
+        }
+    }
+
     pub fn alloc(&mut self) -> usize {
         for index in 0..self.size {
             if !self.flags[index] {
