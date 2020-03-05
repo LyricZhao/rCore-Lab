@@ -17,6 +17,13 @@ impl MemoryArea {
             self.handler.map(pt, page, &self.attr);
         }
     }
+
+    pub fn transfer(&self, src: &mut PageTableImpl, dst: &mut PageTableImpl) {
+        for va in PageRange::new(self.start, self.end) {
+            self.handler.transfer(src, dst, va, &self.attr);
+        }
+    }
+
     fn unmap(&self, pt: &mut PageTableImpl) {
         for page in PageRange::new(self.start, self.end) {
             self.handler.unmap(pt, page);

@@ -4,7 +4,7 @@ pub mod handler;
 
 use crate::consts::*;
 use crate::memory::access_pa_via_va;
-use crate::memory::paging::PageTableImpl;
+use crate::memory::paging::{PageTableImpl, PageRange};
 use alloc::{boxed::Box, vec::Vec};
 use area::MemoryArea;
 use attr::MemoryAttr;
@@ -50,6 +50,18 @@ impl MemorySet {
         memory_set.map_kernel_and_physical_memory();
         memory_set
     }
+
+    pub fn clone(&mut self) -> Self {
+        let mut table = PageTableImpl::new_bare();
+        for area in self.areas.iter() {
+            area.transfer(&mut self.page_table, &mut table);
+        }
+        MemorySet {
+            areas: self.areas.clone(),
+            page_table: table
+        }
+    }
+
     pub fn map_kernel_and_physical_memory(&mut self) {
         extern "C" {
             fn stext();

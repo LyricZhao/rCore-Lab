@@ -10,6 +10,7 @@ pub trait MemoryHandler: Debug + 'static {
     fn box_clone(&self) -> Box<dyn MemoryHandler>;
     fn map(&self, pt: &mut PageTableImpl, va: usize, attr: &MemoryAttr);
     fn unmap(&self, pt: &mut PageTableImpl, va: usize);
+    fn transfer(&self, src: &mut PageTableImpl, dst: &mut PageTableImpl, va: usize, attr: &MemoryAttr);
     fn page_copy(&self, pt: &mut PageTableImpl, va: usize, src: usize, length: usize);
 }
 
@@ -38,6 +39,9 @@ impl MemoryHandler for Linear {
     }
     fn unmap(&self, pt: &mut PageTableImpl, va: usize) {
         pt.unmap(va);
+    }
+    fn transfer(&self, src: &mut PageTableImpl, dst: &mut PageTableImpl, va: usize, attr: &MemoryAttr) {
+        self.map(dst, va, attr);
     }
     fn page_copy(&self, pt: &mut PageTableImpl, va: usize, src: usize, length: usize) {
         let pa = pt.get_entry(va).expect("get pa error!").0.addr().as_usize();
@@ -79,6 +83,12 @@ impl MemoryHandler for ByFrame {
     fn unmap(&self, pt: &mut PageTableImpl, va: usize) {
         pt.unmap(va);
     }
+
+    fn transfer(&self, src: &mut PageTableImpl, dst: &mut PageTableImpl, va: usize, attr: &MemoryAttr) {
+        self.map(dst, va, attr);
+        dst.get_page_slice_mut(va).copy_from_slice(src.get_page_slice_mut(va));
+    }
+
     fn page_copy(&self, pt: &mut PageTableImpl, va: usize, src: usize, length: usize) {
         let pa = pt.get_entry(va).expect("get pa error!").0.addr().as_usize();
         unsafe {

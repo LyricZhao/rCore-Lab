@@ -24,6 +24,7 @@ pub struct Thread {
     pub context: Context,
     pub kstack: KernelStack,
     pub wait: Option<Tid>,
+    pub vm: Option<MemorySet>,
 }
 
 impl Thread {
@@ -33,14 +34,15 @@ impl Thread {
         }
     }
 
-    // TODO: to be done
     pub fn fork(&mut self, tf: &mut TrapFrame) -> Box<Thread> {
         unsafe {
             let kstack_ = KernelStack::new();
+            let vm_ = self.vm.as_mut().unwrap().clone();
             Box::new(Thread {
-                context: Context::new_kernel_thread(tf.sepc as usize, kstack_.top(), satp::read().bits()),
+                context: Context::new_fork(tf, kstack_.top(), vm_.token()),
                 kstack: kstack_,
                 wait: None,
+                vm: Some(vm_)
             })
         }
     }
@@ -52,6 +54,7 @@ impl Thread {
                 context: Context::new_kernel_thread(entry, kstack_.top(), satp::read().bits()),
                 kstack: kstack_,
                 wait: None,
+                vm: None
             })
         }
     }
@@ -61,6 +64,7 @@ impl Thread {
             context: Context::null(),
             kstack: KernelStack::new_empty(),
             wait: None,
+            vm: None,
         })
     }
 
@@ -106,6 +110,7 @@ impl Thread {
             context: Context::new_user_thread(entry_addr, ustack_top, kstack.top(), vm.token()),
             kstack: kstack,
             wait: wait_thread,
+            vm: Some(vm)
         })
     }
 }
