@@ -3,6 +3,7 @@ enum SyscallId {
     Write = 64,
     Exit = 93,
     Exec = 221,
+    Fork = 220,
 }
 
 #[inline(always)]
@@ -19,6 +20,10 @@ fn sys_call(syscall_id: SyscallId, arg0: usize, arg1: usize, arg2: usize, arg3: 
         );
     }
     ret
+}
+
+pub fn sys_fork() -> isize {
+    sys_call(SyscallId::Fork, 0, 0, 0, 0) as isize
 }
 
 pub fn sys_write(ch: u8) -> i64 {

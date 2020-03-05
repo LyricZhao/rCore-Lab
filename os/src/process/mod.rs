@@ -9,6 +9,7 @@ use processor::Processor;
 use scheduler::RRScheduler;
 use structs::Thread;
 use thread_pool::ThreadPool;
+use crate::context::TrapFrame;
 
 pub type Tid = usize;
 pub type ExitCode = usize;
@@ -25,6 +26,11 @@ pub fn init() {
     execute("rust/user_shell", None);
 
     println!("++++ setup process!   ++++");
+}
+
+// Lab-5
+pub fn fork(tf: &mut TrapFrame) -> Tid {
+    CPU.fork(tf)
 }
 
 pub fn execute(path: &str, host_tid: Option<Tid>) -> bool {

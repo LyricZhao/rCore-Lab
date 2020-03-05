@@ -1,7 +1,7 @@
 use super::{ExitCode, Tid};
 use crate::alloc::alloc::{alloc, dealloc, Layout};
 use crate::consts::*;
-use crate::context::Context;
+use crate::context::{Context, TrapFrame};
 use crate::memory::memory_set::{attr::MemoryAttr, handler::ByFrame, MemorySet};
 use alloc::boxed::Box;
 use core::str;
@@ -30,6 +30,18 @@ impl Thread {
     pub fn switch_to(&mut self, target: &mut Thread) {
         unsafe {
             self.context.switch(&mut target.context);
+        }
+    }
+
+    // TODO: to be done
+    pub fn fork(&mut self, tf: &mut TrapFrame) -> Box<Thread> {
+        unsafe {
+            let kstack_ = KernelStack::new();
+            Box::new(Thread {
+                context: Context::new_kernel_thread(tf.sepc as usize, kstack_.top(), satp::read().bits()),
+                kstack: kstack_,
+                wait: None,
+            })
         }
     }
 

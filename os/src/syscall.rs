@@ -5,6 +5,7 @@ pub const SYS_WRITE: usize = 64;
 pub const SYS_EXIT: usize = 93;
 pub const SYS_READ: usize = 63;
 pub const SYS_EXEC: usize = 221;
+pub const SYS_FORK: usize = 220;
 
 pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
     match id {
@@ -18,6 +19,7 @@ pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
         }
         SYS_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
         SYS_EXEC => sys_exec(args[0] as *const u8),
+        SYS_FORK => sys_fork(tf),
         _ => {
             panic!("unknown syscall id {}", id);
         }
@@ -26,6 +28,10 @@ pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
 
 fn sys_exit(code: usize) {
     process::exit(code);
+}
+
+fn sys_fork(tf: &mut TrapFrame) -> isize {
+    process::fork(tf) as isize
 }
 
 fn sys_read(fd: usize, base: *mut u8, len: usize) -> isize {

@@ -103,6 +103,16 @@ impl PageTableImpl {
         }
     }
 
+    // Copy of a page
+    pub fn get_page_slice_mut<'a>(&mut self, vaddr: usize) -> &'a mut [u8] {
+        let frame = self
+            .page_table
+            .translate_page(Page::of_addr(VirtAddr::new(vaddr)))
+            .unwrap();
+        let vaddr = frame.start_address().as_usize() + PHYSICAL_MEMORY_OFFSET;
+        unsafe { core::slice::from_raw_parts_mut(vaddr as *mut u8, 0x1000) }
+    }
+
     pub fn map(&mut self, va: usize, pa: usize) -> &mut PageEntry {
         let flags = EF::VALID | EF::READABLE | EF::WRITABLE;
         let page = Page::of_addr(VirtAddr::new(va));

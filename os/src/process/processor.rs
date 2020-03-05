@@ -1,10 +1,11 @@
-use crate::context::ContextContent;
+use crate::context::{ContextContent, TrapFrame};
 use crate::interrupt::*;
 use crate::process::structs::*;
 use crate::process::thread_pool::ThreadPool;
 use crate::process::Tid;
 use alloc::boxed::Box;
 use core::cell::UnsafeCell;
+use core::ops::Deref;
 
 pub struct ProcessorInner {
     pool: Box<ThreadPool>,
@@ -41,8 +42,8 @@ impl Processor {
             .expect("Processor is not initialized!")
     }
 
-    pub fn add_thread(&self, thread: Box<Thread>) {
-        self.inner().pool.add(thread);
+    pub fn add_thread(&self, thread: Box<Thread>) -> Tid {
+        self.inner().pool.add(thread)
     }
 
     pub fn idle_main(&self) -> ! {
@@ -131,5 +132,11 @@ impl Processor {
 
     pub fn current_tid(&self) -> usize {
         self.inner().current.as_mut().unwrap().0 as usize
+    }
+
+    // Fork current and return Tid
+    pub fn fork(&self, tf: &mut TrapFrame) -> Tid {
+        let inner = self.inner();
+        self.add_thread(inner.current.as_mut().unwrap().1.fork(tf))
     }
 }
