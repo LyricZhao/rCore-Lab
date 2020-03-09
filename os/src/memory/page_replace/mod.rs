@@ -17,6 +17,7 @@ use {
 mod fifo;
 
 pub use fifo::FifoPageReplace;
+pub use fifo::ClockPageReplace;
 
 pub trait PageReplace: Send {
     /// 将可被置换的物理页帧纳入算法
@@ -74,5 +75,5 @@ pub trait PageReplace: Send {
 
 lazy_static! {
     pub static ref PAGE_REPLACE_HANDLER: Mutex<Box<dyn PageReplace>> =
-        Mutex::new(Box::new(FifoPageReplace::default()));
+        Mutex::new(Box::new(ClockPageReplace::default()));
 }
