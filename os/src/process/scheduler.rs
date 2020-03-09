@@ -151,7 +151,7 @@ impl StrideScheduler {
             if next == 0 || self.threads[next].stride >= stride {
                 break;
             }
-            prev += 1;
+            prev = next;
         }
 
         self.threads[prev].next = tid;
@@ -169,6 +169,8 @@ impl StrideScheduler {
         if next > 0 {
             self.threads[next].prev = prev;
         }
+        self.threads[tid].prev = 0;
+        self.threads[tid].next = 0;
     }
 }
 
@@ -217,7 +219,6 @@ impl Scheduler for StrideScheduler {
     fn exit(&mut self, tid: usize) {
         let tid = tid + 1;
         self.current = 0;
-        self.remove(tid);
         self.threads[tid] = SInfo::default();
     }
 }
