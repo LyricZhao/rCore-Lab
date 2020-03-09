@@ -14,6 +14,7 @@ pub fn init() {
 }
 
 pub fn clock_set_next_event() {
+    unsafe { TICKS += 1; }
     set_timer(get_cycle() + TIMEBASE);
 }
 
