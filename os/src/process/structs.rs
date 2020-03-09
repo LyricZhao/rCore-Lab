@@ -47,7 +47,7 @@ impl Thread {
                 kstack: kstack_,
                 wait: None,
                 vm: Some(vm_),
-                ofile: [None; NOFILE]
+                ofile: self.ofile.clone() // TODO
             })
         }
     }
