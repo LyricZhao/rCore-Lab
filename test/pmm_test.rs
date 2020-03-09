@@ -1,5 +1,4 @@
 global_asm!(include_str!("boot/entry64.asm"));
-global_asm!(include_str!("link_user.S"));
 
 use crate::consts::*;
 use crate::memory::{alloc_frame, dealloc_frame};
@@ -14,13 +13,8 @@ pub extern "C" fn rust_main() -> ! {
         ((end as usize - KERNEL_BEGIN_VADDR + KERNEL_BEGIN_PADDR) >> 12) + 1,
         PHYSICAL_MEMORY_END >> 12,
     );
-    crate::interrupt::init();
-    crate::fs::init();
-    crate::process::init();
-    crate::timer::init();
     println!("First Fit Allocator: {} / 8", FF_grade);
-    crate::process::run();
-    loop {}
+    crate::sbi::shutdown();
 }
 
 use riscv::addr::Frame;
@@ -51,24 +45,24 @@ fn FirstFitAllocator_test() -> usize {
     if !alloc(4).is_none() {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     let mut p1 = alloc(3);
     if p1.is_none() {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     let mut p1 = p1.unwrap();
     if !alloc(1).is_none() {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     if p0 + 2 != p1 {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     let mut p2 = p0 + 1;
     dealloc(p0, 1);
@@ -77,14 +71,14 @@ fn FirstFitAllocator_test() -> usize {
     if p0 != p2 - 1 {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     dealloc(p0, 1);
     p0 = alloc(2).unwrap();
     if p0 != p2 + 1 {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     dealloc(p0, 2);
     dealloc(p2, 1);
@@ -92,12 +86,12 @@ fn FirstFitAllocator_test() -> usize {
     if p0.is_none() {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     if !alloc(1).is_none() {
         return grade;
     } else {
-        grade += 1 ;
+        grade += 1;
     }
     dealloc(p0.unwrap(), 5);
     return grade;

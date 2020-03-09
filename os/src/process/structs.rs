@@ -11,6 +11,9 @@ use xmas_elf::{
     program::{Flags, SegmentData, Type},
     ElfFile,
 };
+use crate::fs::file::File;
+use spin::Mutex;
+use alloc::sync::Arc;
 
 #[derive(Clone)]
 pub enum Status {
@@ -25,6 +28,7 @@ pub struct Thread {
     pub kstack: KernelStack,
     pub wait: Option<Tid>,
     pub vm: Option<MemorySet>,
+    pub ofile: [Option<Arc<Mutex<File>>>; NOFILE],
 }
 
 impl Thread {
@@ -42,7 +46,8 @@ impl Thread {
                 context: Context::new_fork(tf, kstack_.top(), vm_.token()),
                 kstack: kstack_,
                 wait: None,
-                vm: Some(vm_)
+                vm: Some(vm_),
+                ofile: [None; NOFILE]
             })
         }
     }
@@ -54,7 +59,8 @@ impl Thread {
                 context: Context::new_kernel_thread(entry, kstack_.top(), satp::read().bits()),
                 kstack: kstack_,
                 wait: None,
-                vm: None
+                vm: None,
+                ofile: [None; NOFILE],
             })
         }
     }
@@ -65,6 +71,7 @@ impl Thread {
             kstack: KernelStack::new_empty(),
             wait: None,
             vm: None,
+            ofile: [None; NOFILE],
         })
     }
 
@@ -106,12 +113,36 @@ impl Thread {
 
         let kstack = KernelStack::new();
 
-        Box::new(Thread {
+        let mut thread = Thread {
             context: Context::new_user_thread(entry_addr, ustack_top, kstack.top(), vm.token()),
             kstack: kstack,
             wait: wait_thread,
-            vm: Some(vm)
-        })
+            vm: Some(vm),
+            ofile: [None; NOFILE],
+        };
+        for i in 0..3 {
+            thread.ofile[i] = Some(Arc::new(Mutex::new(File::default())));
+        }
+        Box::new(thread)
+    }
+
+    // 分配文件描述符
+    pub fn alloc_fd(&mut self) -> i32 {
+        let mut fd = 0;
+        for i in 0usize..NOFILE {
+            if self.ofile[i].is_none() {
+                fd = i;
+                break;
+            }
+        }
+        self.ofile[fd] = Some(Arc::new(Mutex::new(File::default())));
+        fd as i32
+    }
+
+    // 回收文件描述符
+    pub fn dealloc_fd(&mut self, fd: i32) {
+        assert!(self.ofile[fd as usize].is_some());
+        self.ofile[fd as usize] = None;
     }
 }
 

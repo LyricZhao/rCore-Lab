@@ -139,4 +139,8 @@ impl Processor {
         let inner = self.inner();
         self.add_thread(inner.current.as_mut().unwrap().1.fork(tf))
     }
+
+    pub fn current_thread_mut(&self) -> &mut Thread {
+        self.inner().current.as_mut().unwrap().1.as_mut()
+    }
 }

@@ -1,4 +1,6 @@
 enum SyscallId {
+    Open = 56,
+    Close = 57,
     Read = 63,
     Write = 64,
     Exit = 93,
@@ -26,8 +28,16 @@ pub fn sys_fork() -> isize {
     sys_call(SyscallId::Fork, 0, 0, 0, 0) as isize
 }
 
-pub fn sys_write(ch: u8) -> i64 {
-    sys_call(SyscallId::Write, ch as usize, 0, 0, 0)
+pub fn sys_open(path: *const u8, flags: i32) -> i64 {
+    sys_call(SyscallId::Open, path as usize, flags as usize, 0, 0)
+}
+
+pub fn sys_close(fd: i32) -> i64 {
+    sys_call(SyscallId::Close, fd as usize, 0, 0, 0)
+}
+
+pub fn sys_write(fd: usize, base: *const u8, len: usize) -> i64 {
+    sys_call(SyscallId::Write, fd, base as usize, len, 0)
 }
 
 pub fn sys_exit(code: usize) -> ! {
