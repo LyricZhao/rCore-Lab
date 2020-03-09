@@ -10,6 +10,7 @@ use scheduler::RRScheduler;
 use structs::Thread;
 use thread_pool::ThreadPool;
 use crate::context::TrapFrame;
+use crate::process::scheduler::StrideScheduler;
 
 pub type Tid = usize;
 pub type ExitCode = usize;
@@ -17,7 +18,7 @@ pub type ExitCode = usize;
 static CPU: Processor = Processor::new();
 
 pub fn init() {
-    let scheduler = RRScheduler::new(1);
+    let scheduler = StrideScheduler::new();
     let thread_pool = ThreadPool::new(100, Box::new(scheduler));
     let idle = Thread::new_kernel(Processor::idle_main as usize);
     idle.append_initial_arguments([&CPU as *const Processor as usize, 0, 0]);
