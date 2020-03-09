@@ -13,9 +13,7 @@
   println!("Mapping [{:#x}..{:#x}) to [{:#x}..{:#x})", self.start, self.end, self.start - PHYSICAL_MEMORY_OFFSET, self.end - PHYSICAL_MEMORY_OFFSET);
   ```
 
-- 并在push完`bootstack`段之后加一个死循环，观察输出：
-
-  <img src="./pics/output.png" style="zoom:50%;" />
+- 并在push完`bootstack`段之后加一个死循环，观察输出
 
 - 也就是如下的结构
 
@@ -36,6 +34,36 @@
 
 - `0x88000000`正好是`PHYSICAL_MEMORY_END`
 
-#### 要求二：目前页面替换算法的实现问题
+#### 要求二：目前页面替换算法的实现问题（新的要求）
+
+- `do_pgfault`在找到可替换页之后，没有把替换进去的物理页`push`到算法中去，解决方法就是重新写这个函数
+- 剩下大体上的就找不出来了（另外感觉框架写的不是很软工和fancy）
 
 #### 要求三：实现时钟页面替换算法
+
+- 类似`FifoPageReplace`，我实现了`ClockPageReplace`，并同样用`VecDeque`来维护在内存中的页，不同的是，选择被替换页时根据算法本身循环选择没有被访问过的页，并清除访问标记。
+
+- `choose_victim`具体实现见下：
+
+  ```rust
+  fn choose_victim(&mut self) -> Option<(usize, Arc<Mutex<PageTableImpl>>)> {
+  	let mut i = 0;
+  	loop {
+  		let index = (i + self.current) % self.frames.len();
+  		let (vaddr, pt) = self.frames.get(index).as_mut().unwrap();
+  		if pt.lock().get_entry(*vaddr).unwrap().accessed() {
+  			pt.lock().get_entry(*vaddr).unwrap().clear_accessed();
+  		} else {
+  			let ret = self.frames.remove(index);
+  			self.current = if self.frames.len() > 0 {
+  				index % self.frames.len()
+  			} else {
+  				0
+  			};
+  		return ret;
+  		}
+  		i += 1;
+  	}
+  	unreachable!()
+  }
+  ```

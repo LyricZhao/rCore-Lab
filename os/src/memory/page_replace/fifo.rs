@@ -36,7 +36,8 @@ impl PageReplace for ClockPageReplace {
     }
 
     fn choose_victim(&mut self) -> Option<(usize, Arc<Mutex<PageTableImpl>>)> {
-        for i in 0..self.frames.len() {
+        let mut i = 0;
+        loop {
             let index = (i + self.current) % self.frames.len();
             let (vaddr, pt) = self.frames.get(index).as_mut().unwrap();
             if pt.lock().get_entry(*vaddr).unwrap().accessed() {
@@ -50,14 +51,9 @@ impl PageReplace for ClockPageReplace {
                 };
                 return ret;
             }
+            i += 1;
         }
-        let ret = self.frames.remove(self.current);
-        self.current = if self.frames.len() > 0 {
-            self.current % self.frames.len()
-        } else {
-            0
-        };
-        ret
+        unreachable!()
     }
 
     fn tick(&self) {}
