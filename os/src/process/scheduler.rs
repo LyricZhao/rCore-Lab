@@ -6,6 +6,7 @@ pub trait Scheduler {
     fn pop(&mut self) -> Option<Tid>;
     fn tick(&mut self) -> bool;
     fn exit(&mut self, tid: Tid);
+    fn set_priority(&mut self, priority: usize, tid: Tid);
 }
 
 #[derive(Default)]
@@ -94,6 +95,8 @@ impl Scheduler for RRScheduler {
             self.current = 0;
         }
     }
+
+    fn set_priority(&mut self, priority: usize, tid: Tid) { }
 }
 
 const BIG_STRIDE: usize = 40320; // 8!
@@ -135,10 +138,6 @@ impl StrideScheduler {
         };
         scheduler.threads.push(SInfo::default());
         scheduler
-    }
-
-    pub fn set_priority(&mut self, priority: usize, tid: Tid) {
-        self.threads[tid + 1].pass = BIG_STRIDE / priority;
     }
 
     fn resort(&mut self, tid: Tid) {
@@ -220,5 +219,9 @@ impl Scheduler for StrideScheduler {
         let tid = tid + 1;
         self.current = 0;
         self.threads[tid] = SInfo::default();
+    }
+
+    fn set_priority(&mut self, priority: usize, tid: Tid) {
+        self.threads[tid + 1].pass = BIG_STRIDE / priority;
     }
 }

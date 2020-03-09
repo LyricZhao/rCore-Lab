@@ -1,6 +1,7 @@
 use crate::context::TrapFrame;
 use crate::process;
 use crate::fs::file::FileDescriptorType;
+use crate::timer::TICKS;
 
 pub const SYS_OPEN: usize = 56;
 pub const SYS_CLOSE: usize = 57;
@@ -9,6 +10,8 @@ pub const SYS_EXIT: usize = 93;
 pub const SYS_READ: usize = 63;
 pub const SYS_EXEC: usize = 221;
 pub const SYS_FORK: usize = 220;
+pub const SYS_SETPRIORITY: usize = 140;
+pub const SYS_TIMES: usize = 153;
 
 pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
     match id {
@@ -19,13 +22,24 @@ pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
         SYS_EXIT => {
             sys_exit(args[0]);
             0
-        }
+        },
+        SYS_SETPRIORITY => sys_setpriority(args[0]),
+        SYS_TIMES => sys_gettime(),
         SYS_EXEC => sys_exec(args[0] as *const u8),
         SYS_FORK => sys_fork(tf),
         _ => {
             panic!("unknown syscall id {}", id);
         }
     }
+}
+
+fn sys_setpriority(priority: usize) -> isize {
+    process::set_priority(priority);
+    0
+}
+
+fn sys_gettime() -> isize {
+    unsafe { TICKS as isize }
 }
 
 fn sys_open(path: *const u8, flags: i32) -> isize {

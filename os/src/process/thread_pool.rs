@@ -10,7 +10,7 @@ pub struct ThreadInfo {
 
 pub struct ThreadPool {
     pub threads: Vec<Option<ThreadInfo>>,
-    scheduler: Box<dyn Scheduler>,
+    pub scheduler: Box<dyn Scheduler>,
 }
 
 impl ThreadPool {

@@ -34,6 +34,11 @@ pub fn fork(tf: &mut TrapFrame) -> Tid {
     CPU.fork(tf)
 }
 
+// Lab-6
+pub fn set_priority(priority: usize) {
+    CPU.set_priority(priority);
+}
+
 pub fn execute(path: &str, host_tid: Option<Tid>) -> bool {
     let find_result = ROOT_INODE.lookup(path);
     match find_result {
