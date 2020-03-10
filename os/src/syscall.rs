@@ -11,8 +11,6 @@ pub const SYS_EXEC: usize = 221;
 pub const SYS_FORK: usize = 220;
 pub const SYS_PIPE: usize = 59;
 
-const PIPE_NOTHING: isize = -110;
-
 pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
     match id {
         SYS_OPEN => sys_open(args[0] as *const u8, args[1] as i32),
@@ -93,10 +91,11 @@ unsafe fn sys_read(fd: usize, base: *mut u8, len: usize) -> isize {
                 return s as isize;
             },
             FileDescriptorType::FD_PIPE => {
-                if let Some(ch) = file.pipe_read() {
-                    return ch as isize;
+                return if let Some(ch) = file.pipe_read() {
+                    *(base as *mut u8) = ch;
+                    1
                 } else {
-                    PIPE_NOTHING
+                    0
                 }
             },
             _ => {
@@ -135,6 +134,7 @@ unsafe fn sys_write(fd: usize, base: *const u8, len: usize) -> isize {
                     file.pipe_write(*ptr);
                     ptr.add(1);
                 }
+                return len as isize;
             },
             _ => {
                 panic!("fdtype not handled!");

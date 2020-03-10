@@ -9,8 +9,6 @@ enum SyscallId {
     Pipe = 59,
 }
 
-const PIPE_NOTHING: i64 = -110;
-
 #[inline(always)]
 fn sys_call(syscall_id: SyscallId, arg0: usize, arg1: usize, arg2: usize, arg3: usize) -> i64 {
     let id = syscall_id as usize;
@@ -56,14 +54,11 @@ pub fn sys_exit(code: usize) -> ! {
 }
 
 pub fn sys_read(fd: usize, base: *const u8, len: usize) -> i64 {
-    let mut ret = 0;
-    loop {
-        ret = sys_call(SyscallId::Read, fd, base as usize, len, 0);
-        if ret != PIPE_NOTHING {
-            break
-        }
+    let mut rest = len as i64;
+    while rest > 0 {
+        rest -= sys_call(SyscallId::Read, fd, base as usize, rest as usize, 0);
     }
-    ret
+    len as i64
 }
 
 pub fn sys_exec(path: *const u8) {
