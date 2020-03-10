@@ -48,18 +48,16 @@ impl Processor {
     pub fn idle_main(&self) -> ! {
         let inner = self.inner();
         disable_and_store();
-
         loop {
             if let Some(thread) = inner.pool.acquire() {
                 inner.current = Some(thread);
-                // println!("\n>>>> will switch_to thread {} in idle_main!", inner.current.as_mut().unwrap().0);
                 inner
                     .idle
                     .switch_to(&mut *inner.current.as_mut().unwrap().1);
-
-                // println!("\n<<<< switch_back to idle in idle_main!");
                 let (tid, thread) = inner.current.take().unwrap();
                 inner.pool.retrieve(tid, thread);
+                enable();
+                disable_and_store();
             } else {
                 enable_and_wfi();
                 disable_and_store();
@@ -106,22 +104,16 @@ impl Processor {
         if !inner.current.is_none() {
             unsafe {
                 let flags = disable_and_store();
-                let tid = inner.current.as_mut().unwrap().0;
-                let thread_info = inner.pool.threads[tid]
-                    .as_mut()
-                    .expect("thread not existed when yielding");
-                //let thread_info = inner.pool.get_thread_info(tid);
-                thread_info.status = Status::Sleeping;
-                inner
-                    .current
-                    .as_mut()
-                    .unwrap()
-                    .1
-                    .switch_to(&mut *inner.idle);
-
+                let current_thread = &mut inner.current.as_mut().unwrap().1;
+                current_thread.switch_to(&mut *inner.idle);
                 restore(flags);
             }
         }
+    }
+
+    pub fn park(&self) {
+        self.inner().pool.set_sleep(self.current_tid());
+        self.yield_now();
     }
 
     pub fn wake_up(&self, tid: Tid) {

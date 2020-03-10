@@ -120,7 +120,7 @@ pub unsafe fn from_cstr(s: *const u8) -> &'static str {
 fn sys_exec(path: *const u8) -> isize {
     let valid = process::execute(unsafe { from_cstr(path) }, Some(process::current_tid()));
     if valid {
-        process::yield_now();
+        process::park();
     }
     return 0;
 }

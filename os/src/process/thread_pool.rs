@@ -33,6 +33,11 @@ impl ThreadPool {
         panic!("alloc tid failed!");
     }
 
+    pub fn set_sleep(&mut self, tid: Tid) {
+        let proc = self.threads[tid].as_mut().expect("thread not exist");
+        proc.status = Status::Sleeping;
+    }
+
     pub fn add(&mut self, _thread: Box<Thread>) {
         let tid = self.alloc_tid();
         self.threads[tid] = Some(ThreadInfo {

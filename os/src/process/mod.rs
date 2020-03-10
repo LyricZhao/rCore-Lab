@@ -2,6 +2,7 @@ pub mod processor;
 pub mod scheduler;
 pub mod structs;
 pub mod thread_pool;
+pub mod timer;
 
 use crate::fs::{INodeExt, ROOT_INODE};
 use alloc::boxed::Box;
@@ -9,6 +10,10 @@ use processor::Processor;
 use scheduler::RRScheduler;
 use structs::Thread;
 use thread_pool::ThreadPool;
+use self::timer::Timer;
+use crate::timer::now;
+use lazy_static::lazy_static;
+use spin::Mutex;
 
 pub type Tid = usize;
 pub type ExitCode = usize;
@@ -43,8 +48,8 @@ pub fn execute(path: &str, host_tid: Option<Tid>) -> bool {
     }
 }
 
-pub fn tick() {
-    CPU.tick();
+pub fn park() {
+    CPU.park();
 }
 
 pub fn run() {
@@ -68,4 +73,43 @@ pub fn current_tid() -> usize {
 
 pub fn current_thread_mut() -> &'static mut Thread {
     CPU.current_thread_mut()
+}
+
+lazy_static! {
+    static ref TIMER: Mutex<Timer> = Mutex::new(Timer::default());
+}
+
+pub fn tick() {
+    CPU.tick();
+    TIMER.lock().tick(now());
+}
+
+pub fn sleep(sec: usize) {
+    let tid = current_tid();
+    TIMER
+        .lock()
+        .add(now() + (sec * 100) as u64, move || wake_up(tid));
+    park();
+}
+
+/// Spawn a new kernel thread from function `f`.
+pub fn spawn<F>(f: F)
+    where
+        F: FnOnce() + Send + 'static,
+{
+    let f = Box::into_raw(Box::new(f));
+    let new_thread = Thread::new_kernel(entry::<F> as usize);
+    new_thread.append_initial_arguments([f as usize, 0, 0]);
+    CPU.add_thread(new_thread);
+
+    // define a normal function, pass the function object from argument
+    extern "C" fn entry<F>(f: usize) -> !
+        where
+            F: FnOnce() + Send + 'static,
+    {
+        let f = unsafe { Box::from_raw(f as *mut F) };
+        f();
+        exit(0);
+        unreachable!()
+    }
 }
