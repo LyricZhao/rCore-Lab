@@ -9,6 +9,9 @@ pub const SYS_EXIT: usize = 93;
 pub const SYS_READ: usize = 63;
 pub const SYS_EXEC: usize = 221;
 pub const SYS_FORK: usize = 220;
+pub const SYS_PIPE: usize = 59;
+
+const PIPE_NOTHING: isize = -110;
 
 pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
     match id {
@@ -22,10 +25,20 @@ pub fn syscall(id: usize, args: [usize; 3], tf: &mut TrapFrame) -> isize {
         }
         SYS_EXEC => sys_exec(args[0] as *const u8),
         SYS_FORK => sys_fork(tf),
+        SYS_PIPE => sys_pipe(),
         _ => {
             panic!("unknown syscall id {}", id);
         }
     }
+}
+
+pub fn sys_pipe() -> isize {
+    let thread = process::current_thread_mut();
+    let reader = thread.alloc_fd() as usize;
+    let writer = thread.alloc_fd() as usize;
+    thread.ofile[reader as usize].as_ref().unwrap().lock().open_pipe(true);
+    thread.ofile[writer as usize].as_ref().unwrap().lock().open_pipe(false);
+    ((writer << 32) | reader) as isize
 }
 
 fn sys_open(path: *const u8, flags: i32) -> isize {
@@ -78,7 +91,14 @@ unsafe fn sys_read(fd: usize, base: *mut u8, len: usize) -> isize {
                 offset += s;
                 file.set_offset(offset);
                 return s as isize;
-            }
+            },
+            FileDescriptorType::FD_PIPE => {
+                if let Some(ch) = file.pipe_read() {
+                    return ch as isize;
+                } else {
+                    PIPE_NOTHING
+                }
+            },
             _ => {
                 panic!("fdtype not handled!");
             }
@@ -108,7 +128,14 @@ unsafe fn sys_write(fd: usize, base: *const u8, len: usize) -> isize {
                 offset += s;
                 file.set_offset(offset);
                 return s as isize;
-            }
+            },
+            FileDescriptorType::FD_PIPE => {
+                let mut ptr = base;
+                for i in 0..len {
+                    file.pipe_write(*ptr);
+                    ptr.add(1);
+                }
+            },
             _ => {
                 panic!("fdtype not handled!");
             }

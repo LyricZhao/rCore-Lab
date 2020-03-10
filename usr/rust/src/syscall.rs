@@ -6,7 +6,10 @@ enum SyscallId {
     Exit = 93,
     Exec = 221,
     Fork = 220,
+    Pipe = 59,
 }
+
+const PIPE_NOTHING: i64 = -110;
 
 #[inline(always)]
 fn sys_call(syscall_id: SyscallId, arg0: usize, arg1: usize, arg2: usize, arg3: usize) -> i64 {
@@ -22,6 +25,13 @@ fn sys_call(syscall_id: SyscallId, arg0: usize, arg1: usize, arg2: usize, arg3: 
         );
     }
     ret
+}
+
+pub fn sys_pipe(pipefd: &mut[i32; 2]) -> i64 {
+    let ret = sys_call(SyscallId::Pipe, 0, 0, 0, 0) as u64;
+    pipefd[0] = (ret & 0xffffffff) as i32;
+    pipefd[1] = (ret >> 32) as i32;
+    0
 }
 
 pub fn sys_fork() -> isize {
@@ -46,7 +56,14 @@ pub fn sys_exit(code: usize) -> ! {
 }
 
 pub fn sys_read(fd: usize, base: *const u8, len: usize) -> i64 {
-    sys_call(SyscallId::Read, fd, base as usize, len, 0)
+    let mut ret = 0;
+    loop {
+        ret = sys_call(SyscallId::Read, fd, base as usize, len, 0);
+        if ret != PIPE_NOTHING {
+            break
+        }
+    }
+    ret
 }
 
 pub fn sys_exec(path: *const u8) {
