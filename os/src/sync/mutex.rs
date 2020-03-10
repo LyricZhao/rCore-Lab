@@ -1,5 +1,5 @@
 use crate::interrupt::{disable_and_store, restore};
-use crate::process::yield_now;
+use crate::process::{yield_now, sleep};
 use core::cell::UnsafeCell;
 use core::default::Default;
 use core::marker::Sync;
@@ -43,10 +43,18 @@ impl<T> Mutex<T> {
 }
 
 impl<T: ?Sized> Mutex<T> {
+    // TODO: how about the atomic problem ?
     fn obtain_lock(&self) {
-        // TODO
-        // try to get lock
-        // what to do if get fail?
+        unsafe {
+            loop {
+                if !(*self.lock.get()) {
+                    *self.lock.get() = true;
+                    break;
+                } else {
+                    sleep(1);
+                }
+            }
+        }
     }
 
     /// Locks the spinlock and returns a guard.
@@ -84,6 +92,6 @@ impl<'a, T: ?Sized> DerefMut for MutexGuard<'a, T> {
 impl<'a, T: ?Sized> Drop for MutexGuard<'a, T> {
     /// The dropping of the MutexGuard will release the lock it was created from.
     fn drop(&mut self) {
-        // TODO
+        *self.lock = false;
     }
 }
