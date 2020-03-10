@@ -1,5 +1,5 @@
 use crate::interrupt::{disable_and_store, restore};
-use crate::process::{yield_now, sleep};
+use crate::process::{yield_now, sleep, park};
 use core::cell::UnsafeCell;
 use core::default::Default;
 use core::marker::Sync;
@@ -51,7 +51,7 @@ impl<T: ?Sized> Mutex<T> {
                     *self.lock.get() = true;
                     break;
                 } else {
-                    sleep(1);
+                    yield_now();
                 }
             }
         }
