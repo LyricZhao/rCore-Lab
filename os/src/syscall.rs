@@ -1,6 +1,6 @@
 use crate::context::TrapFrame;
 use crate::process;
-use crate::fs::file::FileDescriptorType;
+use crate::fs::file::{FileDescriptorType, File};
 
 pub const SYS_OPEN: usize = 56;
 pub const SYS_CLOSE: usize = 57;
@@ -34,8 +34,8 @@ pub fn sys_pipe() -> isize {
     let thread = process::current_thread_mut();
     let reader = thread.alloc_fd() as usize;
     let writer = thread.alloc_fd() as usize;
-    thread.ofile[reader as usize].as_ref().unwrap().lock().open_pipe(true);
-    thread.ofile[writer as usize].as_ref().unwrap().lock().open_pipe(false);
+    let arc = thread.ofile[reader as usize].as_ref().unwrap().lock().open_pipe(true, None);
+    thread.ofile[writer as usize].as_ref().unwrap().lock().open_pipe(false, arc);
     ((writer << 32) | reader) as isize
 }
 
@@ -91,12 +91,14 @@ unsafe fn sys_read(fd: usize, base: *mut u8, len: usize) -> isize {
                 return s as isize;
             },
             FileDescriptorType::FD_PIPE => {
-                return if let Some(ch) = file.pipe_read() {
-                    *(base as *mut u8) = ch;
-                    1
-                } else {
-                    0
+                let mut read = 0;
+                let mut ptr = base;
+                while read != len {
+                    *ptr = file.pipe_read();
+                    ptr.add(1);
+                    read += 1;
                 }
+                len as isize
             },
             _ => {
                 panic!("fdtype not handled!");

@@ -54,11 +54,7 @@ pub fn sys_exit(code: usize) -> ! {
 }
 
 pub fn sys_read(fd: usize, base: *const u8, len: usize) -> i64 {
-    let mut rest = len as i64;
-    while rest > 0 {
-        rest -= sys_call(SyscallId::Read, fd, base as usize, rest as usize, 0);
-    }
-    len as i64
+    sys_call(SyscallId::Read, fd, base as usize, len as usize, 0)
 }
 
 pub fn sys_exec(path: *const u8) {
